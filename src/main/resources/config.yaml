@@ -1,0 +1,12 @@
+http:
+  port: "8081"
+  
+aws:
+  access_token: "![usOyEGQlsYY7+E/6h5YXPwadRviOKkEV]"
+  session_token: "![wYgGAOiiMQiyDCJ2WwFF04DJNBBUn8HbY+0YBX3x9PXEgkNItc5vDpQM27+9hujz]"
+  test_Token: "![2Vjv8EQEres8niyYnsQLlA==]"
+  ARN: "![DeMHZn8n7QuAqt23BYPoPgNwlozksA1dqjsIVO9QSov8fOitM2sW4kAabNd5EBH9]"
+  host: "![GCyulKHKJQEt4GGG7ui7ivOX+xwMOI/mDydVIK7VsPY=]"
+  
+
+  

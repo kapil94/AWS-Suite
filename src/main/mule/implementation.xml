@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:s3="http://www.mulesoft.org/schema/mule/s3" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:sns="http://www.mulesoft.org/schema/mule/sns"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/sns http://www.mulesoft.org/schema/mule/sns/current/mule-sns.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/s3 http://www.mulesoft.org/schema/mule/s3/current/mule-s3.xsd">
+	<flow name="AWS_suite" doc:id="601bd24a-72b2-4034-9f28-4acc25a0d7e2" >
+		<http:listener doc:name="POST /Notification" doc:id="a6701e4f-2d42-4ed9-915b-0fba7f491528" path="/getNotification" allowedMethods="POST" config-ref="HTTP_Listener_config"/>
+		<ee:transform doc:name="String to JSON" doc:id="b5329505-d998-40a1-9d17-5302d6570572" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: read(payload,"application/json")
+	
+
+	}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<choice doc:name="get subscription or get Notification" doc:id="3bfd54be-f161-40a0-8ef0-0df16b674d61" >
+			<when expression='#[payload.message["Type"] =="SubscriptionConfirmation"]'>
+				<ee:transform doc:name="get subsciption URL" doc:id="5f390303-9c0f-4a24-9e49-e248d22c10e4">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+import * from dw::core::Strings
+
+
+output application/java
+---
+{
+
+	url: substring(payload.message["SubscribeURL"] as String,36,sizeOf(payload.message["SubscribeURL"] as String splitBy('')))
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<http:request method="GET" doc:name="GET /subscription" doc:id="edae0974-622c-4930-ac76-69d00d2a811e" path="#[payload.url]" config-ref="HTTP_Request_configuration"/>
+				<logger level="INFO" doc:name="Logger" doc:id="0b7b5cdc-2bfd-4d2c-ae6f-1a84ead15c37" message="#[payload]"/>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="get Records" doc:id="419b46fd-7376-4d42-8b62-538093a2e270">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"records":read(payload.message["Message"],"application/json")
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<set-payload value='#[output application/json &#10;&#10;---&#10;&#10;{&#10;	"key":payload.records.Records[0].s3.object.key,&#10;	"bucketName":payload.records.Records[0].s3.bucket.name&#10;	&#10;}]' doc:name="set key and bucket Name" doc:id="99261e09-c6cf-41e2-8da7-ec98a4e4ae83" />
+				<s3:get-object doc:name="Read File" doc:id="50f51492-dcb3-422e-96e1-1b4672fcc2c2" config-ref="Amazon_S3_Configuration" bucketName="#[payload.bucketName]" key="#[payload.key]" />
+				<ee:transform doc:name="JSON format" doc:id="8b027b4a-ef09-4a8e-b618-104e4d51781e" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="75f217c2-50c5-4a8c-b55d-d3e63c13f474" message="#[payload]" />
+			</otherwise>
+		</choice>
+	</flow>
+</mule>
